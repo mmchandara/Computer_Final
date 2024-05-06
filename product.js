@@ -2,6 +2,7 @@ const express = require('express');
 var mysql = require('mysql');
 const app = express();
 const cors = require('cors');
+const bcrypt = require('bcrypt');
 
 const data = mysql.createConnection({
     host: 'localhost',
@@ -323,5 +324,34 @@ app.delete('/order_items/:id', (req, res) => {
         res.send('item deleted successfully');
     });
 });
-
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+  
+    // Query to fetch the user from the database based on the provided username
+    const query = 'SELECT * FROM users WHERE username = ?';
+    data.query(query, [username], async (err, results) => {
+      if (err) {
+        console.error('Error querying database:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+  
+      if (results.length === 0) {
+        // If no user found with the provided username
+        return res.status(401).json({ error: 'Invalid username or password' });
+      }
+  
+      const user = results[0];
+      // Compare the password provided by the user with the hashed password stored in the database
+      const passwordMatch = await bcrypt.compare(password, user.password);
+  
+      if (!passwordMatch) {
+        // If passwords don't match
+        return res.status(401).json({ error: 'Invalid username or password' });
+      }
+  
+      // If username and password are correct, generate a token or session and send it back to the client
+      // You can also send back the user data if needed
+      res.status(200).json({ token: 'your_generated_token', user });
+    });
+  });
 app.listen(8080);
